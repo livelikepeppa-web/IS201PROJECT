@@ -1,0 +1,52 @@
+body {
+    background-color: #f5f0ff;
+    font-family: 'Georgia', serif;
+    color: #333;
+    text-align: center;
+}
+
+/* HEADINGS */
+h1 {
+    color: #6a5acd;
+}
+
+h2 {
+    color: #483d8b;
+}
+
+/* BOX STYLES */
+.box1 {
+    background-color: white;
+    margin: 20px auto;
+    padding: 20px;
+    border-radius: 15px;
+    width: 80%;
+}
+
+.box2 {
+    background-color: #e6e6fa;
+    margin: 20px auto;
+    padding: 20px;
+    border-radius: 15px;
+    width: 80%;
+}
+
+.box3 {
+    background-color: #dcd0ff;
+    margin: 20px auto;
+    padding: 20px;
+    border-radius: 15px;
+    width: 80%;
+}
+
+/* IMAGE STYLE */
+img {
+    margin: 10px;
+    border-radius: 10px;
+}
+
+/* ⭐ THIS FIXES YOUR LIST ALIGNMENT */
+.left-list {
+    text-align: left;
+    display: inline-block;
+}

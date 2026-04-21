@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sweet Cat Catcher 🎵</title>
+<style>
+    body {
+        margin: 0;
+        background: linear-gradient(#ffd6e7, #fff);
+        overflow: hidden;
+        font-family: Arial, sans-serif;
+        text-align: center;
+    }
+
+    canvas {
+        display: none;
+        margin: auto;
+        background: #fff8fb;
+        border: 4px solid #ff9ecb;
+    }
+
+    #ui {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        font-size: 18px;
+        color: #ff4fa3;
+        display: none;
+    }
+
+    #startScreen {
+        margin-top: 150px;
+    }
+
+    button {
+        padding: 15px 30px;
+        font-size: 20px;
+        background: #ff9ecb;
+        border: none;
+        border-radius: 10px;
+        color: white;
+        cursor: pointer;
+    }
+</style>
+</head>
+<body>
+
+<div id="startScreen">
+    <h1>🍬 Sweet Cat Catcher 🎵</h1>
+    <p>Move with arrow keys and catch the candies!</p>
+    <button onclick="startGame()">Start Game</button>
+</div>
+
+<div id="ui">
+    Score: <span id="score">0</span> |
+    Lives: <span id="lives">5</span>
+</div>
+
+<canvas id="game" width="500" height="700"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let cat, candies, score, lives, keys;
+let fallSpeed, spawnRate, slowTimer, gameRunning;
+let difficultyTimer;
+
+// 🎵 Sound
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playCuteLoop() {
+    let osc = audioCtx.createOscillator();
+    let gain = audioCtx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = 400;
+    gain.gain.value = 0.05;
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+
+    setInterval(() => {
+        osc.frequency.value = 400 + Math.random() * 150;
+    }, 500);
+}
+
+// Controls
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
+
+function startGame() {
+    document.getElementById("startScreen").style.display = "none";
+    canvas.style.display = "block";
+    document.getElementById("ui").style.display = "block";
+
+    cat = { x: 220, y: 640, width: 60, height: 40, speed: 6 };
+    candies = [];
+    score = 0;
+    lives = 5;
+    keys = {};
+    fallSpeed = 1.5;       // slower start
+    spawnRate = 1200;      // slower spawn
+    slowTimer = 0;
+    gameRunning = true;
+    difficultyTimer = 0;
+
+    playCuteLoop();
+    gameLoop();
+    spawnLoop();
+}
+
+// Spawn items
+function spawnCandy() {
+    let lane = Math.floor(Math.random() * 5);
+    let x = lane * 100 + 40;
+
+    candies.push({
+        x: x,
+        y: -20,
+        type: Math.random() < 0.12 ? "clock" : "candy"
+    });
+}
+
+function spawnLoop() {
+    if (!gameRunning) return;
+    spawnCandy();
+    setTimeout(spawnLoop, spawnRate);
+}
+
+// Draw strings
+function drawStrings() {
+    ctx.strokeStyle = "#ffb6d9";
+    ctx.lineWidth = 2;
+    for (let i = 1; i <= 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * 100, 0);
+        ctx.lineTo(i * 100, canvas.height);
+        ctx.stroke();
+    }
+}
+
+// Draw cat
+function drawCat() {
+    ctx.fillStyle = "#ff9ecb";
+    ctx.fillRect(cat.x, cat.y, cat.width, cat.height);
+
+    ctx.beginPath();
+    ctx.moveTo(cat.x, cat.y);
+    ctx.lineTo(cat.x + 10, cat.y - 10);
+    ctx.lineTo(cat.x + 20, cat.y);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(cat.x + 40, cat.y);
+    ctx.lineTo(cat.x + 50, cat.y - 10);
+    ctx.lineTo(cat.x + 60, cat.y);
+    ctx.fill();
+}
+
+// Draw candies
+function drawCandies() {
+    candies.forEach(c => {
+        if (c.type === "candy") {
+            ctx.fillStyle = "#ff6fa5";
+            ctx.beginPath();
+            ctx.arc(c.x, c.y, 10, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            ctx.fillStyle = "#87cefa";
+            ctx.beginPath();
+            ctx.arc(c.x, c.y, 12, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(c.x - 2, c.y - 6, 4, 8);
+        }
+    });
+}
+
+// Update
+function update() {
+    if (keys["ArrowLeft"]) cat.x -= cat.speed;
+    if (keys["ArrowRight"]) cat.x += cat.speed;
+
+    cat.x = Math.max(0, Math.min(canvas.width - cat.width, cat.x));
+
+    let speed = slowTimer > 0 ? fallSpeed * 0.5 : fallSpeed;
+
+    candies.forEach((c, i) => {
+        c.y += speed;
+
+        if (c.y > cat.y && c.x > cat.x && c.x < cat.x + cat.width) {
+            if (c.type === "candy") {
+                score += 10;
+            } else {
+                slowTimer = 300;
+            }
+            candies.splice(i, 1);
+        }
+
+        if (c.y > canvas.height) {
+            if (c.type === "candy") lives--;
+            candies.splice(i, 1);
+        }
+    });
+
+    if (slowTimer > 0) slowTimer--;
+
+    // 🎯 Gradual difficulty increase
+    difficultyTimer++;
+    if (difficultyTimer % 600 === 0) {
+        fallSpeed += 0.2;                 // slowly faster
+        spawnRate = Math.max(500, spawnRate - 100); // more frequent
+    }
+
+    document.getElementById("score").textContent = score;
+    document.getElementById("lives").textContent = lives;
+
+    if (lives <= 0) {
+        alert("Game Over! Score: " + score);
+        location.reload();
+    }
+}
+
+// Draw
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawStrings();
+    drawCat();
+    drawCandies();
+}
+
+// Loop
+function gameLoop() {
+    if (!gameRunning) return;
+    update();
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+</script>
+
+</body>
+<a href="scratch.html">⬅ Back to Scratch Page</a>
+</html>
