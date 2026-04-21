@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>FUN RUN - Hallways</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+    margin: 0;
+    overflow: hidden;
+    background: #111;
+    font-family: Arial;
+}
+
+canvas {
+    display: block;
+    margin: auto;
+    background: linear-gradient(#222, #000);
+    border: 2px solid white;
+}
+
+#hud {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: white;
+    background: rgba(0,0,0,0.5);
+    padding: 10px;
+    font-family: Arial;
+}
+</style>
+</head>
+
+<body>
+
+<div id="hud">🐉 Birdo | Score: 0 | SPACE = Jump | ← → Move</div>
+<canvas id="game" width="900" height="450"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let player = {
+    x: 120,
+    y: 350,
+    vy: 0,
+    lane: 1,
+    stun: 0,
+    score: 0
+};
+
+let lanes = [250, 300, 350];
+let obstacles = [];
+let coins = [];
+let gameOver = false;
+
+/* INPUT */
+document.addEventListener("keydown", (e)=>{
+    if (e.code === "Space") jump();
+    if (e.key === "ArrowLeft") player.lane = Math.max(0, player.lane - 1);
+    if (e.key === "ArrowRight") player.lane = Math.min(2, player.lane + 1);
+});
+
+function jump(){
+    if (player.y >= 350 && player.stun <= 0){
+        player.vy = -12;
+    }
+}
+
+/* SPAWN OBJECTS */
+function spawn(){
+    let r = Math.random();
+
+    if (r < 0.4){
+        obstacles.push({x:900, lane: Math.floor(Math.random()*3), type:"shell"});
+    } else if (r < 0.7){
+        obstacles.push({x:900, lane: Math.floor(Math.random()*3), type:"trap"});
+    } else {
+        coins.push({x:900, lane: Math.floor(Math.random()*3)});
+    }
+}
+
+/* GAME LOOP */
+function update(){
+
+    if (gameOver) return;
+
+    /* gravity */
+    player.y += player.vy;
+    player.vy += 0.6;
+
+    if (player.y > 350){
+        player.y = 350;
+        player.vy = 0;
+    }
+
+    if (player.stun > 0) player.stun--;
+
+    /* move objects */
+    obstacles.forEach(o => o.x -= 6);
+    coins.forEach(c => c.x -= 6);
+
+    /* collision obstacles */
+    obstacles.forEach(o => {
+        if (o.x < player.x + 30 && o.x > player.x - 30){
+            if (o.lane === player.lane){
+
+                if (o.type === "shell"){
+                    player.stun = 40;
+                    player.score -= 5;
+                }
+
+                if (o.type === "trap"){
+                    player.y = 350;
+                    player.score -= 10;
+                }
+            }
+        }
+    });
+
+    /* coins */
+    coins.forEach((c,i)=>{
+        if (c.x < player.x + 30 && c.x > player.x - 30){
+            if (c.lane === player.lane){
+                player.score += 10;
+                coins.splice(i,1);
+            }
+        }
+    });
+
+    /* remove old objects */
+    obstacles = obstacles.filter(o => o.x > -50);
+    coins = coins.filter(c => c.x > -50);
+
+    /* auto-run forward feel */
+    player.score += 0.05;
+
+    /* spawn rate */
+    if (Math.random() < 0.03) spawn();
+
+    draw();
+
+    if (player.score > 150){
+        endGame();
+    }
+}
+
+/* DRAW */
+function draw(){
+    ctx.clearRect(0,0,900,450);
+
+    // lanes
+    for (let i=0;i<3;i++){
+        ctx.fillStyle = i === player.lane ? "#333" : "#222";
+        ctx.fillRect(0, lanes[i], 900, 80);
+    }
+
+    // player (Birdo)
+    ctx.fillStyle = "hotpink";
+    ctx.fillRect(player.x, player.y, 30, 30);
+
+    // obstacles
+    obstacles.forEach(o=>{
+        ctx.fillStyle = o.type === "shell" ? "purple" : "black";
+        ctx.fillRect(o.x, lanes[o.lane], 30, 30);
+    });
+
+    // coins
+    coins.forEach(c=>{
+        ctx.fillStyle = "gold";
+        ctx.beginPath();
+        ctx.arc(c.x, lanes[c.lane] + 20, 10, 0, Math.PI*2);
+        ctx.fill();
+    });
+
+    // HUD
+    document.getElementById("hud").innerText =
+        "🐉 Birdo | Score: " + Math.floor(player.score);
+}
+
+function endGame(){
+    gameOver = true;
+
+    setTimeout(()=>{
+        alert("RUN COMPLETE! 🏁 Final Score: " + Math.floor(player.score));
+        location.reload();
+    }, 200);
+}
+
+/* LOOP */
+function loop(){
+    update();
+    requestAnimationFrame(loop);
+}
+loop();
+</script>
+
+</body>
+</html>
